@@ -1,0 +1,104 @@
+create folder
+
+#intialize the git
+
+git init
+
+#Add the Staging
+git add .
+
+#check the status
+git status
+
+#remove the file from stage location
+git rm --cached file2 
+
+#commit to local repo
+git commit -m ""
+
+#one time setup after git installation
+git config --global user.email "niladrisankarmondal.mondal@gmail.com"
+
+git config --global user.name "NiladriSMondal"
+
+++++++++++++++++++++++++++++++
+
+
+#create git hub account
+
+#add the origin in the local repository
+
+git remote add origin <<git repo links>>
+
+#push your local repo changes to remote repo
+git push -u origin master
+++++++++++++++++++++++++++
+
+add .gitignorefile
+
+add some file pattern to ignore the same 
+
+++++++++++++++++++++
+#check the commit log
+git log --oneline
+#check the commit log graph mode
+git log --oneline --graph
+
+++++++++++++++++++++++
+
+#if changes are there in remote repo
+
+git pull origin <branchname>
+
+
++++++++++++++++++++++++++++++++++
+#to clone a repository
+git clone <remote repo url>
+
++++++++++++++++
+#create branch name
+git branch <branch name>
+
+++++++++++++++++++++++
+#to create a fork
+fork the url https://github.com/GithubResources1/Source-repository.git from github
+
+#clone the fork repo
+git clone [the copied HTTPS URL]
+
+#check the remote url
+git remote -v
+
+#add remote original for upstream to create a pull request
+git remote add upstream https://github.com/GithubResources1/Source-repository.git
+ 
+git remote -v
+ 
+#make changes and push
+git push
+ 
+create a pull request from github url
++++++++++++++++++++++++++++++
+#create git branch 
+git branch new_branch
+
+#rename git branch
+git branch -m new_branch1
+ 
+#delete git branch 
+git branch -d new_branch
+ 
+++++++++++
+#move to another branch
+git checkout branchname
+git switch branchname
+
+#create and move to new branch 
+ git branch -b <new branch>
+ git branch -c <new branch>
+#merge the changes to the branch 
+git merge <branch name>
+ 
+#revert your commit id 
+ git revert <commit id>
+ 
