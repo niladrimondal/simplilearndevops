@@ -1,0 +1,22 @@
+https://git-scm.com/downloads
+
+
+https://www.oracle.com/java/technologies/javase/jdk11-archive-downloads.html
+
+
+https://maven.apache.org/download.cgi?.
+
+
+https://www.jenkins.io/download/
+
+++++++++++++++++++++++++++++++++++++++++++
+Notes:
+We have covered Devops and Agile process
+How devops tools can help us to automate cicd
+
+Jenkins                                             developer build source code - Version control(git,Github)->
+
+Checkout the  Java code - Build the source code(jar,war,dotnetbuild)  Testing(code quality sonar)  QA testing(selenium) - Delivery(depoloy)(AWS, Azure,GCP, On-premises)  (pipeline)
+
+
+Niladri in a res - take a sit person came to me with menu card- I will take some time and finalize my order - list menu person is going to take that - person will go to kitchen he will ask chef to prepare that- chef may tell item pizza is notavailable  person will comeback to niladr(pizza is not available) order burger-> the person go back to kitchen-> chef will prepare-> person will serve the food to Niladri 
