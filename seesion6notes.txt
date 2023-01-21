@@ -1,0 +1,16 @@
+Seesion6 Notes
+
+pipeline view
+
+Warning next generation
+
+
+
+compile
+test
+pmd:pmd / findbugs
+package
+
+
++++++++++++++++++
+clean compile test package war
