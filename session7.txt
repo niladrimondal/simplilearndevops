@@ -1,0 +1,100 @@
+pipeline {
+    agent any
+
+    tools {
+        maven "mavensetup"
+    }
+
+    stages {
+        stage('Checkout the code') {
+            steps {
+                
+                // Get some code from a GitHub repository
+                git 'https://github.com/niladrimondal/DevOpsClassCodes.git'
+            }
+        }
+        stage('compile') {
+            steps {
+                
+                bat "mvn compile"
+            }
+        }    
+        stage('test') {
+            steps {
+                
+                bat "mvn test"
+            }
+        }
+        
+        stage('QA') {
+            steps {
+                
+                bat "mvn pmd:pmd"
+            }
+        }
+        
+        stage('package') {
+            steps {
+                
+                bat "mvn package"
+            }
+        }
+        
+    }
+}
+
+++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+classnotes7
+Plugin:
+Warning next generation
+
+Build with Parameters
+
+Role-based Authorization Strategy
+
++++++++++++++++++
+#Command for Ant
+clean compile test package war
+
+++++++++++++++++++
+curl -X GET http://localhost:8080/job/MyfirstParameterBuildJob/buildWithParameters?token=Milind
+curl -X GET http://18.191.160.64:8080/job/MyfirstParameterBuildJob/buildWithParameters?token=Milind
+
