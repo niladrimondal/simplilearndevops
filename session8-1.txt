@@ -1,0 +1,125 @@
+#create 3 ec2 amazon linux vm  , 1 Master and 2 Worker Nodes and install ansible
+#connect to the servers
+#switch to root
+#update serverpackages
+yum update -y
+
+#5. Install the ansible 
+
+It we install Ansible we need to follow below pre-requisites.
+
+#Download epel repository.
+
+wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+#Verify epel repository
+
+ls
+
+#Install epel repository.
+yum install epel-release-latest-7.noarch.rpm
+
+#Update epel repository.
+yum update -y
+
+#Install all individual packages inside the repository.
+yum install git python python-devel python-pip openssl ansible -y
+
+
+#Chek the Ansible version
+ansible --version
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#create a group add the private ip of the nodes run in master only
+vi /etc/ansible/hosts
+
+[demo]
+<privateip node1>
+<privateip node2>
+
+:wq to save
+
+#create a demo group run in master only
+[demo]
+<privateipnode1>
+<privateipnode2>
+:wq
+
+
+#only in master
+vi /etc/ansible/ansible.cfg
+
+Remove # from inventory
+Remove # from sudo su  or sudo_user = root
+
+esc :wq
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#create user in master and nodes
+adduser ansible
+#set password
+passwd ansible
+
+#login to the created user
+su - ansible
+
+####add ansible to the sudoers file
+#switch to ansible user
+su - ansible
+#can this user create a file
+#can this user download the s/w
+
+#come out of ansible and move to root
+exit
+
+#sudoers file should be edited to add the users to give the user root similar access
+
+visudo : it will let us enter sudoers file or vi /etc/sudoers
+
+#add the user and come to bottam 
+<user> ALL=(ALL) NOPASSWD:ALL
+esc :wq
+ 
+#now try to download a s/w
+ 
+sudo yum install httpd -y 
+ 
+#same process should be done for node1 and node2
+
+#try to ssh node1/node2 from ansible user. you will get permission denied
+ssh <privateip>
+
+######provide permission in both master and nodes
+#move to root
+exit
+vi /etc/ssh/sshd_config
+
+remove # uncomment
+PermitRootLogin yes
+PasswordAuthentication yes
+
+put # before comment out
+PasswordAuthentication no
+
+# restart the sshd servce
+service sshd restart
+
+#try to ssh node user <user>
+ssh <node private ip>
+create file it will show
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# create a ssh key at master and copy the same to nodes to do passwordless authentication
+
+#Generate the Key in the master node
+#generate without passphrase
+ssh-keygen
+
+#check if key got generated
+cd ~/.ssh/
+
+#copy the key to node server
+ssh-copy-id user@privateip
+[ansible@ip-172-31-57-116 .ssh]$ ssh-copy-id ansible@172.31.61.0
+
+#Try to ssh now without password from ansible user , it will not work with other user
+ssh <private-ip>
