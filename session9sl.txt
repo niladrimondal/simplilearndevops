@@ -1,0 +1,332 @@
+#create 3 ec2 amazon linux vm  , 1 Master and 2 Worker Nodes and install ansible
+#connect to the servers
+#switch to root
+#update serverpackages
+yum update -y
+
+#5. Install the ansible 
+
+It we install Ansible we need to follow below pre-requisites.
+
+#Download epel repository.
+
+wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+#Verify epel repository
+
+ls
+
+#Install epel repository.
+yum install epel-release-latest-7.noarch.rpm
+
+#Update epel repository.
+yum update -y
+
+#Install all individual packages inside the repository.
+yum install git python python-devel python-pip openssl ansible -y
+
+
+#Chek the Ansible version
+ansible --version
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#create a group add the private ip of the nodes run in master only
+vi /etc/ansible/hosts
+
+[demo]
+<privateip node1>
+<privateip node2>
+
+:wq to save
+
+#create a demo group run in master only
+[demo]
+<privateipnode1>
+<privateipnode2>
+:wq
+
+
+#only in master
+vi /etc/ansible/ansible.cfg
+
+Remove # from inventory
+Remove # from sudo su  or sudo_user = root
+
+esc :wq
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#create user in master and nodes
+adduser ansible
+#set password
+passwd ansible
+
+#login to the created user
+su - ansible
+
+####add ansible to the sudoers file
+#switch to ansible user
+su - ansible
+#can this user create a file
+#can this user download the s/w
+
+#come out of ansible and move to root
+exit
+
+#sudoers file should be edited to add the users to give the user root similar access
+
+visudo : it will let us enter sudoers file or vi /etc/sudoers
+
+#add the user and come to bottam 
+<user> ALL=(ALL) NOPASSWD:ALL
+esc :wq
+ 
+#now try to download a s/w
+ 
+sudo yum install httpd -y 
+ 
+#same process should be done for node1 and node2
+
+#try to ssh node1/node2 from ansible user. you will get permission denied
+ssh <privateip>
+
+######provide permission in both master and nodes
+#move to root
+exit
+vi /etc/ssh/sshd_config
+
+remove # uncomment
+PermitRootLogin yes
+PasswordAuthentication yes
+
+put # before comment out
+PasswordAuthentication no
+
+# restart the sshd servce
+service sshd restart
+
+#try to ssh node user <user>
+ssh <node private ip>
+create file it will show
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# create a ssh key at master and copy the same to nodes to do passwordless authentication
+
+#Generate the Key in the master node
+#generate without passphrase
+ssh-keygen
+
+#check if key got generated
+cd ~/.ssh/
+
+#copy the key to node server
+ssh-copy-id user@privateip
+[ansible@ip-172-31-57-116 .ssh]$ ssh-copy-id ansible@172.31.61.0
+
+#Try to ssh now without password from ansible user , it will not work with other user
+ssh <private-ip>
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#List The all hosts adhoc command
+ansible all --list-hosts
+ansible demo --list-hosts
+
+ansible demo[1] --list-hosts
+
+#if you  wanted to get last node of the group
+ansible demo[-1] --list-hosts
+
+#if you  wanted to get last node of the all the groups 
+[root@ip-172-31-57-116 ~]# ansible all[-1] --list-hosts
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+what is adhoc command
+what is module
+what is playbook
+
+++++++++++++++++++++++++ Exercise with Adhoc+++++++++++++++++++++++++++++++++
+#usecase 1 , I will create manually files in nodes ansible users , I want list them using adhoc ansible command from the master
+ansible <groupname> -a"linux command"  -----> -a stands for arguments
+
+ansible demo -a"ls"
+
+#usecase 2 , If i want to list the files in node1
+ansible demo[1] -a"ls"
+
+#usecase 3 install httpd in nodes in nodes
+ansible demo -a"yum install httpd -y"
+ansible demo -a"sudo yum install httpd -y"
+
+ansible demo -a"sudo yum remove httpd -y"
+
+#create a file in nodes 
+ansible demo -a"touch niladri"
+
+#create a directory in node1
+ansible demo[1] -a"mkdir nil"
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install docker using playbok #you need to understand 
+[ansible@ip-172-31-57-116 ~]$ vi myfirstplaybook.yaml
+
+--- #our first playbook to install the docker
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  tasks:
+    - name: install docker on nodes
+      action: yum name=docker state=present
+	  
+
+[ansible@ip-172-31-57-116 ~]$ ansible-playbook myfirstplaybook.yaml
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Remove docker and install httpd using playbok #you need to understand
+[ansible@ip-172-31-57-116 ~]$ cat myfirstplaybook.yaml
+--- #our first playbook to install the docker
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  tasks:
+    - name: install docker on nodes
+      action: yum name=docker state=absent
+    - name: install httpd
+      action: yum name=httpd state=present
+[ansible@ip-172-31-57-116 ~]$
++++++++++++++++++++++++++++++++++++++++++
+
+#create a file in master and copy the same to node using play book
+
+touch index.html
+
+[ansible@ip-172-31-57-116 ~]$ cat myfirstplaybook.yaml
+--- #our first playbook to install the docker
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  tasks:
+    - name: install docker on nodes
+      action: yum name=docker state=absent
+    - name: install httpd
+      action: yum name=httpd state=present
+    - name: copy index.html
+      ansible.builtin.copy:
+           src: /home/ansible/index.html
+           dest: /home/ansible/
+[ansible@ip-172-31-57-116 ~]$
+
+
+[ansible@ip-172-31-57-116 ~]$ cat myfirstplaybook.yaml
+--- #our first playbook to install the docker
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+  tasks:
+    - name: install docker on nodes
+      action: yum name=docker state=absent
+    - name: install httpd
+      action: yum name=httpd state=present
+    - name: copy index.html
+      ansible.builtin.copy:
+           src: /home/ansible/index.html
+           dest: /home/ansible/
+    - name: create directory
+      action: file name=niladridir state=directory
+[ansible@ip-172-31-57-116 ~]$
++++++++++++++++++++++++++++++++
+####run a module, using a module install docker
+
+ansiable demo -b -m yum -a "pkg=docker state=present"
+
+++++++++++++++++++++++++++++++++++++++++++
+#host an application on the httpd server using handlers
+
+[ansible@ip-172-31-57-116 ~]$ cat httpdserver.yaml
+--- #Myweb For handlers
+- hosts: demo #your host
+  user: ansible #user
+  become: yes #if you want to use root priviledge to perform some actions
+  connection: ssh #connect type
+  tasks:
+    - name: install httpd
+      action: yum name=httpd state=present
+      notify: restart httpd
+    - name: copy index.html
+      ansible.builtin.copy:
+           src: /home/ansible/index.html
+           dest: /var/www/html/
+  handlers:
+    - name: restart httpd
+      action: service name=httpd state=restarted
+[ansible@ip-172-31-57-116 ~]$
+
++++++++++++++++++++++++++++++++
+Simplilearn script
+ansible -m shell -a "service apache2 status" webservers
+
+ansible -m setup webservers 
+
+ansible webservers -m shell -a 'hostname'
+
+ansible webservers -m apt -a 'name=git state=present' --become
+
+ansible webservers -m file -a 'dest=/root/sample.txt state=touch mode=600 owner=root group=root' --become
+
+
++++++++++++++++++++++++++++++++++++++++++
+
+mkdir terraformsw
+
+wget https://releases.hashicorp.com/terraform/0.14.9/terraform_0.14.9_linux_amd64.zip
+
+unzip terraform_0.14.9_linux_amd64.zip
+
+mv terraform /usr/local/bin/
+
+terraform --version
+
+++++++++++++++++++++++++++++++++
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+sudo yum -y install terraform
+++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++
+
+mkdir s3back
+cd s3back
+
+nano creds.tf
+
+
+provider "aws" {
+  access_key = ""
+  secret_key = ""
+  token = ""
+  region = "us-east-1"
+}
+
+
+#
+nano main.tf
+
+resource "aws_s3_bucket" "b" {
+  bucket = "niladri-test-bucket-1234"
+  acl    = "private"
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
+
+
+terraform init
+
+terraform plan
+
+terraform apply
++++++++++++++++++++++++++++++++
