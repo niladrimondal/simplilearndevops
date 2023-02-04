@@ -1,0 +1,202 @@
+mkdir terraformsw
+
+wget https://releases.hashicorp.com/terraform/0.14.9/terraform_0.14.9_linux_amd64.zip
+
+unzip terraform_0.14.9_linux_amd64.zip
+
+mv terraform /usr/local/bin/
+
+terraform --version
+
+++++++++++++++++++++++++++++++++
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+sudo yum -y install terraform
++++++++++++++++++++++++
+ubuntu
+wget https://releases.hashicorp.com/terraform/0.14.9/terraform_0.14.9_linux_amd64.zip
+
+#install unzip 
+apt install unzip
+
+unzip terraform_0.14.9_linux_amd64.zip
+
+mv terraform /usr/local/bin/ 
+
+
+++++++++++++++++++++
+
+mkdir s3back
+cd s3back
+
+nano creds.tf
+
+
+provider "aws" {
+  access_key = "ASIAQYBHK4LRTN6IKA4R"
+  secret_key = "r18J+dFOVqT4M2jjxSW2344qIgbK8TZTtjZxeRsS"
+  token = "FwoGZXIvYXdzEAIaDBJDn+X3i6sHBt0LcCK/ATvz/SfvUAu3SEBmAJMQ32VualQMUF+GSDY7vzrZ3IVHUb+o/9V8+XSWOmB/MqpXY7cuJueXXIjXEZSQq75zBdlWV7Y+BYz09KHPeFa3hecdFBLCvV8kj7S1J9AvDZ3JAp8CpIyM46lJjqhjZmNkTkyepUERd7rfDpaI1F/RZwv5HVYgFcTJFHMcezZGsyKBjOQUjGXGnmgetucjMXWMvOgnU+dJohn8WX1QQcTrDFGrdObEeZDoy1l9h3pn+xgcKOCD154GMi3D0U4C8qLj9Z0q4hj9Kg8CKVookwBiXe92gtkWm0P2Mq7m0gX8H0IWUvTz570="
+  region = "us-east-1"
+}
+
+
+#
+nano main.tf
+
+resource "aws_s3_bucket" "b" {
+  bucket = "niladri-test-bucket-1234"
+  acl    = "private"
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
+
+
+terraform init
+
+terraform plan
+
+terraform apply
++++++++++++++++++++++++++++++++
+#add ec2-instance with the same s3 template
+
+resource "aws_s3_bucket" "b" {
+  bucket = "niladri-test1-bucket-1234"
+  acl    = "private"
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_instance" "ins" {
+  ami           = "ami-00874d747dde814fa"
+  instance_type = "t2.micro"
+  key_name = "drvm"
+}
+++++++++++++++++++++++++++++++++
+
+variable "awsprops" {
+    type = "map"
+    default = {
+    region = "us-east-1"
+    vpc = ""
+    ami = ""
+    itype = "t2.micro"
+    subnet = ""
+    publicip = true
+    keyname = ""
+    secgroupname = ""
+  }
+}
+
+provider "aws" {
+  region = lookup(var.awsprops, "region")
+}
+
+resource "aws_security_group" "project-iac-sg" {
+  name = lookup(var.awsprops, "secgroupname")
+  description = lookup(var.awsprops, "secgroupname")
+  vpc_id = lookup(var.awsprops, "vpc")
+
+  // To Allow SSH Transport
+  ingress {
+    from_port = 22
+    protocol = "tcp"
+    to_port = 22
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  // To Allow Port 80 Transport
+  ingress {
+    from_port = 80
+    protocol = ""
+    to_port = 80
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_instance" "project-iac" {
+  ami = lookup(var.awsprops, "ami")
+  instance_type = lookup(var.awsprops, "itype")
+  subnet_id = lookup(var.awsprops, "subnet") #FFXsubnet2
+  associate_public_ip_address = lookup(var.awsprops, "publicip")
+  key_name = lookup(var.awsprops, "keyname")
+
+
+  vpc_security_group_ids = [
+    aws_security_group.project-iac-sg.id
+  ]
+  root_block_device {
+    delete_on_termination = true
+    iops = 150
+    volume_size = 50
+    volume_type = "gp2"
+  }
+  tags = {
+    Name ="SERVER01"
+    Environment = "DEV"
+    OS = "UBUNTU"
+    Managed = "IAC"
+  }
+
+  depends_on = [ aws_security_group.project-iac-sg ]
+}
+
+
+output "ec2instance" {
+  value = aws_instance.project-iac.public_ip
+}
+
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Docker:
+
+
+sudo apt-get update
+ 
+Use the following command to install packages to allow the apt to use a repository over HTTPS
+sudo apt-get install \
+apt-transport-https \
+ca-certificates \
+curl \
+gnupg \
+lsb-release
+
+
+#Use the following curl command to add Docker’s official GPG key:
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+#Use the following command to set up a stable repository:
+echo \
+"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+
+#
+sudo apt update
+sudo apt-get install docker-ce
+docker  --version
+
+
+docker --version
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
