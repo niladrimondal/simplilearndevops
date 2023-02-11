@@ -1,0 +1,137 @@
+Create Docker Compose file and Install Docker compose
+sudo apt update
+sudo apt install docker-compose
+
+#Create a file docker-compose.yml
+version: '2'
+services:
+  compose-test:
+     image: centos
+     links:
+       - compose-db
+     command: /usr/bin/curl compose-db:6379
+  compose-db:
+    image: redis
+    expose:
+      - "6379"
+
+
+#make sure docker is working
+#to check the same 
+systemctl status docker
+systemctl restart docker
+
+# if it fails then create the daemonfile in the below path
+nano /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"]
+}
+or you can also follow below stackoverflow link
+https://stackoverflow.com/questions/49110092/failed-to-start-docker-application-container-engine
+
+#and then restart the docker 
+systemctl restart docker
++++++++++++++++++++++++++++++++
+
+#run the docker comppose up command to upload
+sudo docker-compose up
+
+
++++++++++++++++++++++++++++++++++++++
+1.Public container Registry .2. Private registry (ecr,acr,ghcr)
+
+
+
+
+#Upload a docker image to dockerhub public container registry
+
+#retag the image
+docker tag <imagenameid> <dockerhubusername>/<imagename>:tag
+docker tag 5d0da3dc9764 niladrimondaldcr/niladricentos:2.0
+
+#retag or create the docker image with below format
+
+<dockerhubusername>/<imagename>:tag
+niladrimondaldcr/niladricentos:2.0
+
+#push the image to the dockerhub registry
+
+Login to the docker
+root@ip-172-31-25-250:/home/shialmonstar199# docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: niladrimondaldcr
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+root@ip-172-31-25-250:/home/shialmonstar199# 
+
+#docker push command
+docker push niladrimondaldcr/niladricentos:2.0
+
+root@ip-172-31-25-250:/home/shialmonstar199# docker push niladrimondaldcr/niladricentos:2.0
+The push refers to repository [docker.io/niladrimondaldcr/niladricentos]
+74ddd0ec08fa: Mounted from library/centos 
+2.0: digest: sha256:a1801b843b1bfaf77c501e7a6d3f709401a1e0c83863037fa3aab063a7fdb9dc size: 529
+
+
+
+#Upload the image into the private repository
+
+#Pull the docker registry:2 image
+root@ip-172-31-25-250:/home/shialmonstar199# docker pull registry:2
+2: Pulling from library/registry
+ca7dd9ec2225: Pull complete 
+c41ae7ad2b39: Pull complete 
+1ed0fc8a6161: Pull complete 
+21df229223d2: Pull complete 
+626897ccab21: Pull complete 
+Digest: sha256:ce14a6258f37702ff3cd92232a6f5b81ace542d9f1631966999e9f7c1ee6ddba
+Status: Downloaded newer image for registry:2
+docker.io/library/registry:2
+root@ip-172-31-25-250:/home/shialmonstar199# docker images
+REPOSITORY                       TAG       IMAGE ID       CREATED         SIZE
+redis                            latest    2f66aad5324a   47 hours ago    117MB
+registry                         2         81c944c2288b   3 months ago    24.1MB
+centos                           latest    5d0da3dc9764   17 months ago   231MB
+niladrimondaldcr/niladricentos   2.0       5d0da3dc9764   17 months ago   231MB
+root@ip-172-31-25-250:/home/shialmonstar199# 
+
+#Run a container with registry:2 image
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+#i can access the private repository from the localhost rdp
+http://localhost:5000/v2/_catalog
+
+#retage the image to push
+root@ip-172-31-25-250:~# docker tag 5d0da3dc9764 localhost:5000/niladricentos:2.0
+
+#docker psuh
+docker push localhost:5000/niladricentos:2.0
+
+#now browse again to the private repo
+http://localhost:5000/v2/_catalog
+
+#Cleanup
+docker rm -f $(docker ps -aq)
+docker rmi -f $(docker images -q)
+++++++++++++++++++++++++++++++++++++++++
+
+Kubernetes:
+
+1. Master 
+   
+    kube-scheduler
+	etcd (database)    (etcd-replica in another region multiple copy)
+    controller manager
+	  node controller
+	  replicas controler
+	apiserver
+
+2.worker nodes
+    kubelet
+	kube-proxy
+	pod
+	docker runtime
