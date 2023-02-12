@@ -1,0 +1,203 @@
+install kubedm,kubectl(not required for worker node),kubelet
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl
+sudo curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+
+kubelet --version
+kubeadm version
+kubectl version --client
+
+#fix the docker issue
+sudo nano /etc/docker/daemon.json
+
+{
+  "exec-opts": ["native.cgroupdriver=systemd"]
+}
+
+sudo systemctl restart docker
+
+#containerd 
+sudo systemctl status containerd
+sudo nano /etc/containerd/config.toml
+#disabled_plugins = ["cri"]
+sudo systemctl restart containerd
+
+#if required you can uprade the kubernetes version
+sudo apt-get upgrade kubelet kubeadm kubectl
+++++++++++++++++++++++++++++++++++++++++++
+#initialize the k8's cluster
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+#partial output of the above command
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 172.31.21.114:6443 --token k4mulx.fap2kvzlr4734fjd \
+	--discovery-token-ca-cert-hash sha256:39e7ccb8bdd08b66fae8bd45c3f622c6900712cef46daf0e5ca7e0f64d4ae082
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
++++++++++++++++++
+#if you need to reset the cluster
+sudo kubeadm reset
++++++++++++++++++
+
+#Start using kubectl command
+kubectl get nodes
+
+#output
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl get nodes
+NAME               STATUS     ROLES                  AGE     VERSION
+ip-172-31-21-114   NotReady   control-plane,master   6m49s   v1.23.2
+amrutagosavi76a@ip-172-31-21-114:~$ 
+
+#Install network componet 
+#canal
+#flannel
+#calico
+
+#Get the file from github and use the to install k8s network, we are going to use flannel
+https://github.com/flannel-io/flannel/blob/master/Documentation/kube-flannel.yml
+
+#Creat a file kube-flannel.yml
+nano kube-flannel.yml
+
+copy the content and paste the same
+
+#Now apply the kube-flannel.yml using kubectl command
+kubectl apply -f kube-flannel.yml
+
+############output########
+mrutagosavi76a@ip-172-31-21-114:~$ kubectl apply -f kube-flannel.yml
+namespace/kube-flannel created
+clusterrole.rbac.authorization.k8s.io/flannel created
+clusterrolebinding.rbac.authorization.k8s.io/flannel created
+serviceaccount/flannel created
+configmap/kube-flannel-cfg created
+daemonset.apps/kube-flannel-ds created
+amrutagosavi76a@ip-172-31-21-114:~$ 
+############################
+#check the status of the node again now it should be ready
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl get nodes
+NAME               STATUS   ROLES                  AGE   VERSION
+ip-172-31-21-114   Ready    control-plane,master   14m   v1.23.2
+amrutagosavi76a@ip-172-31-21-114:~$
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#tocheck the version
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl explain pods
+KIND:     Pod
+VERSION:  v1
+
+#Now I am going to create my pod
+nano sample.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-container
+spec:
+  terminationGracePeriodSeconds: 0
+  containers:
+  - name: nginx
+    image: nginx:1.10-alpine
+	ports:
+	- containerPort: 80
+  - name: alpine
+    image: alpine:3.5
+	command: ["watch","wget","-qO-","localhost"]
+
+#Now I am going to create a pods with above sample.yml
+
+kubectl create -f sample.yml
+or 
+kubectl apply -f sample.yml
+
+###############output
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl apply -f sample.yml
+pod/multi-container created
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl get pods
+NAME              READY   STATUS    RESTARTS   AGE
+multi-container   0/2     Pending   0          12s
+amrutagosavi76a@ip-172-31-21-114:~$ 
+
+#I am seeing my pod is pending state from long, how should i get the actual logs on the issue
+kubectl describe pods <podname>
+################output
+Events:
+  Type     Reason            Age                 From               Message
+  ----     ------            ----                ----               -------
+  Warning  FailedScheduling  55s (x3 over 3m5s)  default-scheduler  0/1 nodes are available: 1 node(s) had taint {node-role.kubernetes.io/master: }, that the pod didn't tolerate.
+
+
+kubectl describe node <nodename>
+####output
+Taints:             node-role.kubernetes.io/master:NoSchedule
+
+#####Remove the taint
+kubectl taint node <nodename> node-role.kubernetes.io/master:NoSchedule-
+kubectl taint node ip-172-31-21-114 node-role.kubernetes.io/master:NoSchedule-
+
+###output
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl taint node ip-172-31-21-114 node-role.kubernetes.io/master:NoSchedule-
+node/ip-172-31-21-114 untainted
+amrutagosavi76a@ip-172-31-21-114:~$ 
+
+####If you want to add the taint again(not required just for learning purpose)++++++++++++++++++++++++
+kubectl taint node <nodename> node-role.kubernetes.io/master:NoSchedule
+
+#now get the pods again you should see those are in running state
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl get pods
+NAME              READY   STATUS    RESTARTS   AGE
+multi-container   2/2     Running   0          12m
+amrutagosavi76a@ip-172-31-21-114:~$ 
++++++++++++++++++++++++++++++++++++++++++++++
+#create a single container pod
+kubectl run tomcat --image=tomcat:8.0
+#output
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl run tomcat --image=tomcat:8.0
+pod/tomcat created
+amrutagosavi76a@ip-172-31-21-114:~$ kubectl get pods
+NAME              READY   STATUS    RESTARTS   AGE
+multi-container   2/2     Running   0          17m
+tomcat            1/1     Running   0          59s
+amrutagosavi76a@ip-172-31-21-114:~$ 
+++++++++++++++++++++++++++++++++++++++
+
+Learn Nagios:
+
+Nagios core: free and fundamental: --Scrpt, UI is only available for visualization
+
+---cofigure -> .cfg
+
+Nagios XI: enterprise version--> UI Layer you can configure
+
+
+
+https://hub.docker.com/r/manios/nagios
+docker pull manios/nagios
+docker run -d --name nagios -p 0.0.0.0:8081:80 manios/nagios:latest
+
+sudo docker exec -it nagios /bin/bash
+
+
